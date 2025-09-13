@@ -1,0 +1,4 @@
+database_url: "postgres://db:5432/app"
+max_connections: 20
+feature_flags:
+  enable_reports: true
