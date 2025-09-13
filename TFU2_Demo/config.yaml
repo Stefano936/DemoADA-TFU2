@@ -9,8 +9,8 @@ api:
 # TÁCTICA 1: Feature flags para modificar comportamiento sin recompilar
 feature_flags:
   enable_notifications: true
-  enable_reports: true
-  maintenance_mode: false
+  enable_reports: false
+  maintenance_mode: true
 
 # Configuración de logging
 logging:

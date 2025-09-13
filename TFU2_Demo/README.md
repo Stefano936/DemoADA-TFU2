@@ -93,7 +93,7 @@ curl http://localhost:8080
 ```powershell
 # Simular falla y recuperación
 docker-compose down
-.\rollback.ps1
+docker-compose -f docker-compose.rollback.yaml up -d
 # ✅ Sistema recuperado en < 1 minuto
 ```
 
@@ -111,7 +111,7 @@ curl http://localhost:8080
 ```bash
 # 1. Cambiar config.yaml (enable_notifications: false)
 # 2. Recargar SIN reiniciar
-curl -X POST http://localhost:8080/reload-config
+curl -Method POST http://localhost:8080/reload-config
 # 3. Verificar cambio inmediato
 curl http://localhost:8080
 # ✅ Configuración aplicada sin downtime
