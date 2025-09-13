@@ -5,24 +5,8 @@ services:
       - "8080:8080"
     volumes:
       - ./config.yaml:/app/config.yaml
-    environment:
-      - REGISTRY_URL=http://registry:8500
-    depends_on:
-      - registry
-
-  registry:
-    image: consul:1.15
-    ports:
-      - "8500:8500"
-    command: "consul agent -dev -client=0.0.0.0"
 
   notification-service:
     build: ./notification-service
     ports:
       - "8081:8081"
-    environment:
-      - CONSUL_HOST=registry
-      - CONSUL_PORT=8500
-      - SERVICE_IP=notification-service
-    depends_on:
-      - registry

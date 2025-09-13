@@ -1,5 +1,5 @@
-# Script de Rollback para Windows PowerShell
-# Táctica de Disponibilidad - Recuperación ante fallas
+# TÁCTICA: Rollback para Disponibilidad (Recuperación ante fallas)
+# Garantiza disponibilidad < 1 minuto de interrupción
 
 param(
     [switch]$Help,
@@ -7,7 +7,7 @@ param(
 )
 
 if ($Help) {
-    Write-Host "=== SCRIPT DE ROLLBACK - TÁCTICA DE DISPONIBILIDAD ===" -ForegroundColor Cyan
+    Write-Host "=== TÁCTICA: ROLLBACK PARA DISPONIBILIDAD ===" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "Uso: .\rollback.ps1 [opciones]" -ForegroundColor White
     Write-Host ""
@@ -15,7 +15,7 @@ if ($Help) {
     Write-Host "  -Help        Muestra esta ayuda"
     Write-Host "  -VerifyOnly  Solo verifica el estado sin hacer rollback"
     Write-Host ""
-    Write-Host "Este script implementa la táctica de rollback para:"
+    Write-Host "Esta táctica implementa:"
     Write-Host "- Revertir a versión estable ante fallas"
     Write-Host "- Garantizar disponibilidad < 1 minuto de interrupción"
     Write-Host "- Crear backups automáticos del estado actual"
@@ -26,19 +26,12 @@ $BackupDir = ".\backups"
 $RollbackCompose = "docker-compose.rollback.yaml"
 $Timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
 
-Write-Host "=== INICIANDO ROLLBACK DEL SISTEMA ===" -ForegroundColor Cyan
+Write-Host "=== TÁCTICA: ROLLBACK PARA DISPONIBILIDAD ===" -ForegroundColor Cyan
 Write-Host "Fecha: $(Get-Date)" -ForegroundColor Gray
 
 if ($VerifyOnly) {
     Write-Host "🔍 MODO VERIFICACIÓN - Solo chequeando estado..." -ForegroundColor Yellow
 } else {
-    # Verificar si existe configuración de rollback
-    if (-not (Test-Path $RollbackCompose)) {
-        Write-Host "❌ Error: No se encontró $RollbackCompose" -ForegroundColor Red
-        Write-Host "Creando configuración de rollback..." -ForegroundColor Yellow
-        Copy-Item "docker-compose.yaml" $RollbackCompose
-    }
-
     # Crear directorio de backup
     if (-not (Test-Path $BackupDir)) {
         New-Item -ItemType Directory -Path $BackupDir | Out-Null
@@ -79,12 +72,12 @@ try {
 }
 
 try {
-    $consulResponse = Invoke-WebRequest -Uri "http://localhost:8500/v1/status/leader" -TimeoutSec 5 -UseBasicParsing
-    if ($consulResponse.StatusCode -eq 200) {
-        Write-Host "✅ Consul disponible en puerto 8500" -ForegroundColor Green
+    $notifResponse = Invoke-WebRequest -Uri "http://localhost:8081" -TimeoutSec 5 -UseBasicParsing
+    if ($notifResponse.StatusCode -eq 200) {
+        Write-Host "✅ Servicio de notificaciones disponible en puerto 8081" -ForegroundColor Green
     }
 } catch {
-    Write-Host "❌ Consul no disponible en puerto 8500" -ForegroundColor Red
+    Write-Host "❌ Servicio de notificaciones no disponible en puerto 8081" -ForegroundColor Red
 }
 
 if (-not $VerifyOnly) {
@@ -96,7 +89,7 @@ if (-not $VerifyOnly) {
 
     Write-Host ""
     Write-Host "💡 Para volver a la versión actual, ejecute:" -ForegroundColor Yellow
-    Write-Host "   docker-compose -f docker-compose.yaml up -d" -ForegroundColor White
+    Write-Host "   docker-compose up -d" -ForegroundColor White
 } else {
     Write-Host ""
     Write-Host "=== VERIFICACIÓN COMPLETADA ===" -ForegroundColor Cyan

@@ -1,125 +1,149 @@
-### Paso 1: Descargar y ubicarse
+# Demo TFU2 - Tácticas Arquitectónicas
+
+Esta demo implementa **3 tácticas arquitectónicas específicas**:
+
+1. **ROLLBACK** para disponibilidad (recuperación ante fallas)
+2. **BINDING EN TIEMPO DE CONFIGURACIÓN** para modificabilidad
+3. **BINDING EN TIEMPO DE EJECUCIÓN** para modificabilidad
+
+## 🚀 Inicio Rápido
+
+### Paso 1: Ubicarse en el directorio
 ```powershell
 cd C:\Users\stuff\Desktop\DemoADA-TFU2\TFU2_Demo
 ```
 
-### Paso 2: Levantar todo el sistema
+### Paso 2: Levantar el sistema
 ```powershell
 docker-compose up --build
 ```
 
-Esto va a:
-- Construir las imágenes de Docker para la API y el servicio de notificaciones
-- Levantar Consul (nuestro service registry)
-- Iniciar todos los servicios y conectarlos entre sí
+### Paso 3: Verificar funcionamiento
+- **API principal**: http://localhost:8080
+- **Servicio de notificaciones**: http://localhost:8081
 
-**Tip**: La primera vez puede tardar unos minutos porque tiene que descargar las imágenes base.
+## 🎯 Tácticas Implementadas
 
-### Paso 3: Verificar que todo funciona
-Una vez que veas que los logs se calmaron, abrí tu navegador y visitá:
+### 1. 🔄 TÁCTICA: Rollback para Disponibilidad
 
-- **API principal**: http://localhost:8080 - Acá vas a ver la info del sistema
-- **Consul UI**: http://localhost:8500/ui - Para ver qué servicios están registrados
-- **Servicio de notificaciones**: http://localhost:8081 - Un servicio auxiliar
-
-Si ves respuestas JSON en la API principal, ¡ya está todo funcionando! 🎉
-
-## 🧪 Probando las tácticas
-
-### Táctica 1: Rollback en acción
-Supongamos que algo se rompe y necesitás volver atrás rápido:
+**Objetivo**: Recuperación rápida ante fallas (< 1 minuto de interrupción)
 
 ```powershell
-# Hacer rollback completo
+# Hacer rollback completo a versión estable
 .\rollback.ps1
 
-# O solo verificar el estado sin hacer cambios
+# Solo verificar estado sin cambios
 .\rollback.ps1 -VerifyOnly
 ```
 
-El script va a:
-- Hacer backup del estado actual
-- Parar los servicios que están corriendo
-- Levantar la versión "estable" del sistema
-- Verificar que todo esté funcionando
+**Qué hace**:
+- Crea backup automático del estado actual
+- Revierte a configuración estable (`docker-compose.rollback.yaml`)
+- Verifica que servicios estén funcionando
+- Garantiza disponibilidad continua
 
-### Táctica 2: Cambiar configuración sin parar nada
-Abrí el archivo `config.yaml` con tu editor favorito y cambiá algo. Por ejemplo:
+### 2. ⚙️ TÁCTICA: Binding en Tiempo de Configuración
+
+**Objetivo**: Modificar comportamiento sin recompilar código
+
+La aplicación lee configuración desde `config.yaml` al iniciar:
 
 ```yaml
+# Ejemplo: Cambiar estas opciones en config.yaml
 feature_flags:
-  enable_notifications: false  # cambiar a false
-  maintenance_mode: true       # cambiar a true
+  enable_notifications: false  # Deshabilitar notificaciones
+  maintenance_mode: true       # Activar modo mantenimiento
+
+api:
+  port: 8080                   # Cambiar puerto
+
+logging:
+  level: "DEBUG"               # Cambiar nivel de logging
 ```
 
-Después, desde cualquier terminal:
+**Beneficio**: Diferentes configuraciones sin tocar código fuente.
+
+### 3. 🔃 TÁCTICA: Binding en Tiempo de Ejecución
+
+**Objetivo**: Cambiar configuración sin reiniciar servicios
+
 ```bash
-# Recargar la configuración
+# 1. Modificar config.yaml con cualquier editor
+# 2. Recargar configuración en tiempo real:
 curl -X POST http://localhost:8080/reload-config
 
-# Ver cómo cambió el comportamiento
+# 3. Ver cambios aplicados inmediatamente:
 curl http://localhost:8080
 ```
 
-¡Sin reiniciar nada! La app va a responder diferente según la nueva configuración.
+**Beneficio**: Cero downtime para cambios de configuración.
 
-### Táctica 3: Descubrimiento automático de servicios
-```bash
-# Ver qué servicios están registrados en Consul
-curl http://localhost:8500/v1/catalog/services
+## 📋 Endpoints de la Demo
 
-# Hacer que la API busque automáticamente el servicio de notificaciones
-curl http://localhost:8080/notify
+| Endpoint | Método | Descripción |
+|----------|--------|-------------|
+| `/` | GET | Estado general (demuestra binding de configuración) |
+| `/health` | GET | Health check básico |
+| `/config` | GET | Ver configuración actual |
+| `/reload-config` | POST | **TÁCTICA 3**: Recargar config sin reiniciar |
+
+## 🧪 Casos de Prueba
+
+### Probar Táctica 1: Rollback
+```powershell
+# Simular falla y recuperación
+docker-compose down
+.\rollback.ps1
+# ✅ Sistema recuperado en < 1 minuto
 ```
 
-La API va a buscar dinámicamente dónde está el servicio de notificaciones sin que nosotros le hayamos dicho la dirección.
+### Probar Táctica 2: Binding de Configuración
+```bash
+# 1. Editar config.yaml (cambiar maintenance_mode: true)
+# 2. Reiniciar servicios
+docker-compose restart
+# 3. Verificar cambio
+curl http://localhost:8080
+# ✅ Respuesta de mantenimiento sin tocar código
+```
 
-## 📋 Endpoints útiles para probar
+### Probar Táctica 3: Binding en Tiempo de Ejecución
+```bash
+# 1. Cambiar config.yaml (enable_notifications: false)
+# 2. Recargar SIN reiniciar
+curl -X POST http://localhost:8080/reload-config
+# 3. Verificar cambio inmediato
+curl http://localhost:8080
+# ✅ Configuración aplicada sin downtime
+```
 
-- `GET /` - Info general del sistema
-- `GET /health` - Estado de salud de la API
-- `GET /config` - Ver configuración completa (solo en modo debug)
-- `POST /reload-config` - Recargar configuración sin reiniciar
-- `GET /notify` - Probar descubrimiento de servicios
+## 🛠️ Solución de Problemas
 
-## 🛠️ Si algo no funciona
-
-### Los contenedores no levantan
+### Si los contenedores no inician:
 ```powershell
-# Ver qué está pasando
 docker-compose logs
-
-# Limpiar todo y empezar de nuevo
 docker-compose down
 docker-compose up --build
 ```
 
-### Puertos ocupados
-Si te dice que un puerto está ocupado, podés ver qué lo está usando:
-```powershell
-netstat -ano | findstr :8080
-```
-
-### Problemas con PowerShell
-Si el script de rollback no funciona, puede ser por las políticas de ejecución:
+### Si hay problemas con PowerShell:
 ```powershell
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ```
 
-## 🎯 ¿Qué demuestra cada táctica?
-
-- **Rollback**: El sistema puede recuperarse de fallas automáticamente en menos de 1 minuto
-- **Configuración**: Podés cambiar el comportamiento sin tocar código ni reiniciar
-- **Descubrimiento**: Los servicios se encuentran solos, facilitando el scaling y la integración
-
-## 🚫 Para parar todo
-Cuando termines de probar:
+## 🚫 Para Detener Todo
 ```powershell
 docker-compose down
 ```
 
-Esto va a parar y limpiar todos los contenedores.
-
 ---
 
-**¿Dudas?** Este README debería cubrir todo lo básico, pero si algo no está claro o no funciona como esperás, revisá los logs con `docker-compose logs` - ahí generalmente está la pista de qué está pasando.
+## 📚 Resumen de Tácticas
+
+| Táctica | Categoría | Beneficio | Implementación |
+|---------|-----------|-----------|----------------|
+| **Rollback** | Disponibilidad | Recuperación < 1 min | Script PowerShell + docker-compose.rollback.yaml |
+| **Config Binding** | Modificabilidad | Sin recompilación | config.yaml leído al inicio |
+| **Runtime Binding** | Modificabilidad | Sin reinicio | Endpoint /reload-config |
+
+**Cada táctica resuelve un problema específico de arquitectura de software distribuido.**
