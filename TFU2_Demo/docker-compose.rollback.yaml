@@ -1,3 +1,6 @@
+# Configuración de Rollback - Versión Estable
+# Esta configuración utiliza versiones estables conocidas para recuperación rápida
+
 services:
   api:
     build: ./api
@@ -7,14 +10,22 @@ services:
       - ./config.yaml:/app/config.yaml
     environment:
       - REGISTRY_URL=http://registry:8500
+      - APP_VERSION=stable-1.0
+    restart: unless-stopped
     depends_on:
       - registry
 
   registry:
-    image: consul:1.15
+    image: consul:1.14  # Versión estable anterior
     ports:
       - "8500:8500"
     command: "consul agent -dev -client=0.0.0.0"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8500/v1/status/leader"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   notification-service:
     build: ./notification-service
@@ -24,5 +35,7 @@ services:
       - CONSUL_HOST=registry
       - CONSUL_PORT=8500
       - SERVICE_IP=notification-service
+      - APP_VERSION=stable-1.0
+    restart: unless-stopped
     depends_on:
       - registry

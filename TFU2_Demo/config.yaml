@@ -1,4 +1,62 @@
-database_url: "postgres://db:5432/app"
-max_connections: 20
+# Configuración de la aplicación - Binding en tiempo de configuración
+# Esta configuración demuestra cómo cambiar el comportamiento sin recompilar código
+
+# Base de datos
+database:
+  url: "postgres://db:5432/app"
+  max_connections: 20
+  timeout_seconds: 30
+  retry_attempts: 3
+
+# Funcionalidades habilitadas/deshabilitadas
 feature_flags:
   enable_reports: true
+  enable_notifications: true
+  enable_caching: false
+  enable_metrics: true
+  maintenance_mode: false
+
+# Configuración de la API
+api:
+  port: 8080
+  max_request_size: "10MB"
+  rate_limit:
+    requests_per_minute: 100
+    burst_size: 20
+  cors:
+    enabled: true
+    origins: ["http://localhost:3000", "https://myapp.com"]
+
+# Servicios externos
+external_services:
+  notification_service:
+    enabled: true
+    max_retries: 3
+    timeout_ms: 5000
+  metrics_service:
+    enabled: true
+    endpoint: "http://metrics:9090"
+    interval_seconds: 60
+
+# Configuración de logging
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  format: "json"  # json, text
+  output: "stdout"  # stdout, file
+  file_path: "/app/logs/app.log"
+
+# Configuración de registro de servicios
+service_discovery:
+  consul:
+    host: "registry"
+    port: 8500
+    health_check_interval: "10s"
+    service_name: "api-service"
+    service_port: 8080
+    tags: ["api", "web", "v1.0"]
+
+# Configuración específica del entorno
+environment:
+  name: "development"  # development, staging, production
+  debug: true
+  auto_reload: false
